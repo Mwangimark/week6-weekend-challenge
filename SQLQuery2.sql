@@ -103,6 +103,26 @@ SELECT M.Name
 FROM Members M
 INNER JOIN BorrowCounts B ON M.MemberID = B.MemberID;
 
+--user defined function to calculate the over due days for a given loaned book
+--i assumed the due date is after 30 days
+CREATE FUNCTION CalculateOverdueDays(@LoanID INT)
+RETURNS INT
+AS
+BEGIN
+    DECLARE @OverdueDays INT;
+
+    SELECT @OverdueDays = DATEDIFF(DAY, LoanDate, GETDATE()) - 30
+    FROM Loans
+    WHERE LoanID = @LoanID;
+
+    -- Make sure overdue days are not negative
+    IF @OverdueDays < 0
+        SET @OverdueDays = 0;
+
+    RETURN @OverdueDays;
+END;
+
+
 --a vieew that displays details of all overdue loans,including book title,member name and no of over due days
 CREATE VIEW OverdueLoansView AS
 SELECT B.Title AS BookTitle, M.Name AS MemberName, DATEDIFF(DAY, L.LoanDate, GETDATE()) AS OverdueDays
@@ -110,6 +130,11 @@ FROM Loans L
 JOIN Books B ON L.BookID = B.BookID
 JOIN Members M ON L.MemberID = M.MemberID
 WHERE DATEDIFF(DAY, L.LoanDate, GETDATE()) > 30;
+
+--implementing view
+SELECT *
+FROM OverdueLoansView;
+
 
 
 --trigger to prevent borrowing more than 3 books
