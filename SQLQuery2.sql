@@ -103,5 +103,38 @@ SELECT M.Name
 FROM Members M
 INNER JOIN BorrowCounts B ON M.MemberID = B.MemberID;
 
+--a vieew that displays details of all overdue loans,including book title,member name and no of over due days
+CREATE VIEW OverdueLoansView AS
+SELECT B.Title AS BookTitle, M.Name AS MemberName, DATEDIFF(DAY, L.LoanDate, GETDATE()) AS OverdueDays
+FROM Loans L
+JOIN Books B ON L.BookID = B.BookID
+JOIN Members M ON L.MemberID = M.MemberID
+WHERE DATEDIFF(DAY, L.LoanDate, GETDATE()) > 30;
+
+
+--trigger to prevent borrowing more than 3 books
+CREATE TRIGGER PreventExcessiveBorrowing
+ON Loans
+FOR INSERT
+AS
+BEGIN
+    DECLARE @MemberID INT;
+    DECLARE @TotalLoans INT;
+
+    SELECT @MemberID = MemberID
+    FROM inserted;
+
+    SELECT @TotalLoans = COUNT(*)
+    FROM Loans
+    WHERE MemberID = @MemberID;
+
+    IF @TotalLoans >= 3
+    BEGIN
+        RAISERROR('Cannot borrow more than three books at a time.', 16, 1);
+        ROLLBACK TRANSACTION;
+    END
+END;
+
+
 
 
